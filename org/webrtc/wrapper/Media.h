@@ -440,38 +440,38 @@ namespace Org {
 				MediaVideoTrack^ _track;
 		};
 
-		ref class EncodedVideoSource;
+		ref class DecodedVideoSource;
 
 		/// <summary>
 		/// Encoded video stream used as a sink for encoded frames in webrtc engine.
 		/// </summary>
-		class EncodedVideoStream : public rtc::VideoSinkInterface<cricket::VideoFrame> {
+		class DecodedVideoStream : public rtc::VideoSinkInterface<cricket::VideoFrame> {
 		public:
-			EncodedVideoStream(EncodedVideoSource^ videoSource);
+			DecodedVideoStream(DecodedVideoSource^ videoSource);
 			virtual void RenderFrame(const cricket::VideoFrame* frame);
 			void OnFrame(const cricket::VideoFrame& frame) override {
 				RenderFrame(&frame);
 			}
 		private:
-			EncodedVideoSource^ _videoSource;
+			DecodedVideoSource^ _videoSource;
 		};
 
 		/// <summary>
 		/// Source of encoded video samples.
 		/// </summary>
-		public ref class EncodedVideoSource sealed {
+		public ref class DecodedVideoSource sealed {
 			internal:
-			EncodedVideoSource(MediaVideoTrack^ track);
-			void EncodedVideoFrame(uint32 width, uint32 height,
+				DecodedVideoSource(MediaVideoTrack^ track);
+			void DecodedVideoFrame(uint32 width, uint32 height,
 			const Platform::Array<uint8>^ frameData);
 		public:
 			/// <summary>
 			/// Raw video frame has been received.
 			/// </summary>
-			event EncodedVideoSourceDelegate^ OnEncodedVideoFrame;
-			virtual ~EncodedVideoSource();
+			event DecodedVideoSourceDelegate^ OnDecodedVideoFrame;
+			virtual ~DecodedVideoSource();
 		private:
-			std::unique_ptr<EncodedVideoStream> _videoStream;
+			std::unique_ptr<DecodedVideoStream> _videoStream;
 			MediaVideoTrack^ _track;
 		};
 
@@ -547,12 +547,12 @@ namespace Org {
 			RawVideoSource^ CreateRawVideoSource(MediaVideoTrack^ track);
 
 			/// <summary>
-			/// Creates an <see cref="EncodedVideoSource"/> for a video track.
+			/// Creates an <see cref="DecodedVideoSource"/> for a video track.
 			/// </summary>
-			/// <param name="track">Video track to create a <see cref="EncodedVideoSource"/>
+			/// <param name="track">Video track to create a <see cref="DecodedVideoSource"/>
 			/// from</param>
 			/// <returns>Encoded video source.</returns>
-			EncodedVideoSource^ CreateEncodedVideoSource(MediaVideoTrack^ track);
+			DecodedVideoSource^ CreateDecodedVideoSource(MediaVideoTrack^ track);
 
 			/// <summary>
 			/// Retrieves system devices that can be used for audio capturing.

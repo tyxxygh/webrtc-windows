@@ -348,11 +348,11 @@ namespace Org {
 
 		// = EncodedVideoStream =============================================================
 
-		EncodedVideoStream::EncodedVideoStream(EncodedVideoSource^ videoSource) :
+		DecodedVideoStream::DecodedVideoStream(DecodedVideoSource^ videoSource) :
 			_videoSource(videoSource) {
 		}
 
-		void EncodedVideoStream::RenderFrame(const cricket::VideoFrame* frame) {
+		void DecodedVideoStream::RenderFrame(const cricket::VideoFrame* frame) {
 			ComPtr<IMFSample> pSample = (IMFSample*)frame->video_frame_buffer()->native_handle();
 			if (pSample == nullptr)
 				return;
@@ -367,7 +367,7 @@ namespace Org {
 				LOG(LS_ERROR) << "Failed to lock buffer.";
 				return;
 			}
-			_videoSource->EncodedVideoFrame((uint32)frame->width(), (uint32)frame->height(),
+			_videoSource->DecodedVideoFrame((uint32)frame->width(), (uint32)frame->height(),
 			Platform::ArrayReference<uint8>((uint8*)pBytes, curLength));
 			if (FAILED(pBuffer->Unlock())) {
 				LOG(LS_ERROR) << "Failed to unlock buffer";
@@ -377,18 +377,18 @@ namespace Org {
 
 		// = EncodedVideoSource =============================================================
 
-		EncodedVideoSource::EncodedVideoSource(MediaVideoTrack^ track) :
-		_videoStream(new EncodedVideoStream(this)),
+		DecodedVideoSource::DecodedVideoSource(MediaVideoTrack^ track) :
+		_videoStream(new DecodedVideoStream(this)),
 		_track(track) {
 		_track->SetRenderer(_videoStream.get());
 		}
 
-		void EncodedVideoSource::EncodedVideoFrame(uint32 width, uint32 height,
+		void DecodedVideoSource::DecodedVideoFrame(uint32 width, uint32 height,
 		const Platform::Array<uint8>^ frameData) {
-		OnEncodedVideoFrame(width, height, frameData);
+		OnDecodedVideoFrame(width, height, frameData);
 		}
 
-		EncodedVideoSource::~EncodedVideoSource() {
+		DecodedVideoSource::~DecodedVideoSource() {
 		_track->UnsetRenderer(_videoStream.get());
 		}
 
@@ -620,8 +620,8 @@ namespace Org {
 			return ref new RawVideoSource(track);
 		}
 
-		EncodedVideoSource^ Media::CreateEncodedVideoSource(MediaVideoTrack^ track) {
-			return ref new EncodedVideoSource(track);
+		DecodedVideoSource^ Media::CreateDecodedVideoSource(MediaVideoTrack^ track) {
+			return ref new DecodedVideoSource(track);
 		}
 
 		IVector<MediaDevice^>^ Media::GetVideoCaptureDevices() {

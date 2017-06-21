@@ -29,7 +29,7 @@ namespace Org {
 		/// <summary>
 		/// Delegate for receiving video frames from EncodedVideoSource.
 		/// </summary>
-		public delegate void EncodedVideoSourceDelegate(
+		public delegate void DecodedVideoSourceDelegate(
 			uint32, uint32, const Platform::Array<uint8>^);
 
 		// ------------------
