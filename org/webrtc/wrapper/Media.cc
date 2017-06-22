@@ -353,26 +353,11 @@ namespace Org {
 		}
 
 		void DecodedVideoStream::RenderFrame(const cricket::VideoFrame* frame) {
-			ComPtr<IMFSample> pSample = (IMFSample*)frame->video_frame_buffer()->native_handle();
-			if (pSample == nullptr)
-				return;
-			ComPtr<IMFMediaBuffer> pBuffer;
-			if (FAILED(pSample->GetBufferByIndex(0, &pBuffer))) {
-				LOG(LS_ERROR) << "Failed to retrieve buffer.";
-				return;
-			}
-			BYTE* pBytes;
-			DWORD maxLength, curLength;
-			if (FAILED(pBuffer->Lock(&pBytes, &maxLength, &curLength))) {
-				LOG(LS_ERROR) << "Failed to lock buffer.";
-				return;
-			}
+			BYTE* pBytes = (byte*)frame->video_frame_buffer()->native_handle();
+			int curLength = frame->video_frame_buffer()->StrideU();
+
 			_videoSource->DecodedVideoFrame((uint32)frame->width(), (uint32)frame->height(),
-			Platform::ArrayReference<uint8>((uint8*)pBytes, curLength));
-			if (FAILED(pBuffer->Unlock())) {
-				LOG(LS_ERROR) << "Failed to unlock buffer";
-				return;
-			}
+			Platform::ArrayReference<byte>(pBytes, curLength));
 		}
 
 		// = EncodedVideoSource =============================================================
