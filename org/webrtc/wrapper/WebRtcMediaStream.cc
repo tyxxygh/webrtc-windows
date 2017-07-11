@@ -218,6 +218,7 @@ namespace Org {
 
 				RETURN_ON_FAIL(MFSetAttributeSize(mediaType.Get(), MF_MT_FRAME_SIZE, width, height));
 				RETURN_ON_FAIL(mediaType->SetUINT32(MF_LOW_LATENCY, TRUE));
+				RETURN_ON_FAIL(mediaType->SetUINT64(MF_MT_FRAME_RATE, 60));
 				RETURN_ON_FAIL(mediaType->SetUINT32(MF_MT_VIDEO_ROTATION, rotation));
 				RETURN_ON_FAIL(mediaType->SetUINT32(MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive));
 				*ppType = mediaType.Detach();

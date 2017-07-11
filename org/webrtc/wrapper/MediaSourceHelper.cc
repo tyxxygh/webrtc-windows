@@ -149,7 +149,8 @@ namespace Org {
 
 			std::unique_ptr<SampleData> MediaSourceHelper::DequeueH264Frame() {
 
-				if (_frames.size() > 15)
+				// Do not queue more than 2 frames
+				if (_frames.size() > 2)
 					DropFramesToIDR(_frames);
 
 				std::unique_ptr<cricket::VideoFrame> frame(_frames.front());
@@ -163,6 +164,8 @@ namespace Org {
 					if (tmp != nullptr) {
 						tmp->AddRef();
 						data->sample.Attach(tmp);
+						// Setting timestamp to 0 for real-time streaming
+						frame->set_timestamp_us(0);
 						data->renderTime = frame->GetTimeStamp();
 
 						ComPtr<IMFAttributes> sampleAttributes;
@@ -289,7 +292,7 @@ namespace Org {
 						_startTickTime = rtc::TimeMillis();
 						return 0;
 					}
-					LONGLONG frameTime = ((rtc::TimeMillis() - _startTickTime) + _futureOffsetMs) * 1000 * 10;
+					// LONGLONG frameTime = ((rtc::TimeMillis() - _startTickTime) + _futureOffsetMs) * 1000 * 10;
 #else
 					if (_startTime == 0) {
 
@@ -301,8 +304,8 @@ namespace Org {
 
 					LONGLONG frameTime = (frameRenderTime - _startTime) / 100 + (_futureOffsetMs * 1000 * 10);
 #endif
-
-					return frameTime;
+					// Returning 0 timestamp for h264 frames.
+					return 0;
 				} else {
 					// Non-encoded samples seem to work best with a zero timestamp.
 					return 0;
