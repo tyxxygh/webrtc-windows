@@ -61,7 +61,7 @@ namespace Org {
 		};
 	}
 }  // namespace Org.WebRtc
-/*
+
 namespace Org {
 	namespace WebRtc {
 		namespace Internal {
@@ -127,11 +127,12 @@ namespace Org {
 				MediaStreamSourceSampleRequest^ _request;
 				Windows::Media::Core::MediaStreamSourceSampleRequestDeferral^ _deferral;
 				Windows::Media::Core::MediaStreamSourceStartingRequestDeferral^ _startingDeferral;
+				Windows::Media::Core::MediaStreamSourceStartingEventArgs^ _startingArgs;
 
 				ULONG _frameBeingQueued;
 			};
 		}
 	}
 }  // namespace Org.WebRtc.Internal
-*/
+
 #endif  // WEBRTC_BUILD_WINRT_GYP_API_RTMEDIASTREAMSOURCE_H_

@@ -38,7 +38,7 @@ namespace Org {
 	namespace WebRtc {
 		namespace Internal {
 
-#define MAX_FRAME_DELAY_MS 30
+#define MAX_FRAME_DELAY_MS 16
 #define RETURN_ON_FAIL(code) { HRESULT hr = code; if (FAILED(hr)) {OutputDebugString(L"[Failed]\r\n"); return hr;} }
 
 			// #define USE_MEMORY_BUFFERS
@@ -218,7 +218,9 @@ namespace Org {
 
 				RETURN_ON_FAIL(MFSetAttributeSize(mediaType.Get(), MF_MT_FRAME_SIZE, width, height));
 				RETURN_ON_FAIL(mediaType->SetUINT32(MF_LOW_LATENCY, TRUE));
-				RETURN_ON_FAIL(mediaType->SetUINT64(MF_MT_FRAME_RATE, 60));
+				RETURN_ON_FAIL(mediaType->SetUINT32(MF_MT_FIXED_SIZE_SAMPLES, TRUE));
+				RETURN_ON_FAIL(mediaType->SetUINT32(MF_MT_ALL_SAMPLES_INDEPENDENT, TRUE));
+				MFSetAttributeSize(mediaType.Get(), MF_MT_FRAME_RATE, 30, 1);
 				RETURN_ON_FAIL(mediaType->SetUINT32(MF_MT_VIDEO_ROTATION, rotation));
 				RETURN_ON_FAIL(mediaType->SetUINT32(MF_MT_INTERLACE_MODE, MFVideoInterlace_Progressive));
 				*ppType = mediaType.Detach();

@@ -519,8 +519,8 @@ namespace Org {
 			/// when receiving media change event notifications.
 			/// </param>
 			/// <returns>A media source.</returns>
-			//IMediaSource^ CreateMediaStreamSource(
-			//	MediaVideoTrack^ track, uint32 framerate, String^ id);
+			IMediaSource^ CreateMediaStreamSource(
+				MediaVideoTrack^ track, uint32 framerate, String^ id);
 
 			/// <summary>
 			/// Creates an <see cref="IMediaSource"/> for a video track, with a given

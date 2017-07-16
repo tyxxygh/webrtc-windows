@@ -114,26 +114,27 @@ namespace Org {
 				}
 
 				// Set the timestamp property
-				if (_isFirstFrame) {
-					_isFirstFrame = false;
-					Org::WebRtc::FirstFrameRenderHelper::FireEvent(
-						rtc::Timing::WallTimeNow() * rtc::kNumMillisecsPerSec);
-					LONGLONG frameTime = GetNextSampleTimeHns(data->renderTime, _frameType == FrameTypeH264);
-					data->sample->SetSampleTime(frameTime);
-				} else {
-					LONGLONG frameTime = GetNextSampleTimeHns(data->renderTime, _frameType == FrameTypeH264);
+				//if (_isFirstFrame) {
+				//	_isFirstFrame = false;
+				//	Org::WebRtc::FirstFrameRenderHelper::FireEvent(
+				//		rtc::Timing::WallTimeNow() * rtc::kNumMillisecsPerSec);
+				//	LONGLONG frameTime = GetNextSampleTimeHns(data->renderTime, _frameType == FrameTypeH264);
+				//	data->sample->SetSampleTime(frameTime);
+				//} else {
+				//	LONGLONG frameTime = GetNextSampleTimeHns(data->renderTime, _frameType == FrameTypeH264);
 
-					data->sample->SetSampleTime(frameTime);
+				//	data->sample->SetSampleTime(frameTime);
 
-					// Set the duration property
-					if (_frameType == FrameTypeH264) {
-						data->sample->SetSampleDuration(frameTime - _lastSampleTime);
-					} else {
-						LONGLONG duration = (LONGLONG)((1.0 / 30) * 1000 * 1000 * 10);
-						data->sample->SetSampleDuration(duration);
-					}
-					_lastSampleTime = frameTime;
-				}
+				//	// Set the duration property
+				//	if (_frameType == FrameTypeH264) {
+				//		LONGLONG duration = (LONGLONG)((1.0 / 60) * 1000 * 1000 * 10);
+				//		data->sample->SetSampleDuration(duration);
+				//	} else {
+				//		LONGLONG duration = (LONGLONG)((1.0 / 30) * 1000 * 1000 * 10);
+				//		data->sample->SetSampleDuration(duration);
+				//	}
+				//	_lastSampleTime = frameTime;
+				//}
 
 				UpdateFrameRate();
 
@@ -164,12 +165,13 @@ namespace Org {
 					if (tmp != nullptr) {
 						tmp->AddRef();
 						data->sample.Attach(tmp);
-						// Setting timestamp to 0 for real-time streaming
-						frame->set_timestamp_us(0);
-						data->renderTime = frame->GetTimeStamp();
+						// Setting timestamp to 0 for real-time streaming a
+						// frame->set_timestamp_us(0);
+						// data->renderTime = frame->GetTimeStamp();
 
 						ComPtr<IMFAttributes> sampleAttributes;
 						data->sample.As(&sampleAttributes);
+						// sampleAttributes->SetUINT32(MFSampleExtension_Discontinuity, TRUE);
 						if (IsSampleIDR(tmp)) {
 							sampleAttributes->SetUINT32(MFSampleExtension_CleanPoint, TRUE);
 						}

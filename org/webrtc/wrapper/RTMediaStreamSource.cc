@@ -27,7 +27,7 @@ using Windows::Media::MediaProperties::VideoEncodingProperties;
 using Windows::Media::MediaProperties::MediaEncodingSubtypes;
 using Windows::System::Threading::TimerElapsedHandler;
 using Windows::System::Threading::ThreadPoolTimer;
-/*
+
 namespace Org {
 	namespace WebRtc {
 		namespace Internal {
@@ -35,7 +35,7 @@ namespace Org {
 			MediaStreamSource^ RTMediaStreamSource::CreateMediaSource(
 				MediaVideoTrack^ track, uint32 frameRate, String^ id) {
 
-				bool isH264 = false;//TODO Check track->GetImpl()->GetSource()->IsH264Source();
+				bool isH264 = true;//TODO Check track->GetImpl()->GetSource()->IsH264Source();
 
 				auto streamState = ref new RTMediaStreamSource(track, isH264);
 				streamState->_id = id;
@@ -59,7 +59,7 @@ namespace Org {
 				// this is needed since the UI element might request sample before webrtc has
 				// incoming frame ready(ex.: remote stream), in this case, this initial value
 				// will make sure we will at least create a small dummy frame.
-				streamState->_videoDesc->EncodingProperties->Width = 720;
+				streamState->_videoDesc->EncodingProperties->Width = 480;
 				streamState->_videoDesc->EncodingProperties->Height = 1280;
 
 				Org::WebRtc::ResolutionHelper::FireEvent(id,
@@ -79,9 +79,16 @@ namespace Org {
 						MediaStreamSourceStartingEventArgs^ args) {
 					// Get a deferall on the starting event so we can trigger it
 					// when the first frame arrives.
+					streamState->_startingArgs = args;
 					streamState->_startingDeferral = args->Request->GetDeferral();
+					//auto timespan = Windows::Foundation::TimeSpan();
+					//timespan.Duration = 0;
+					//args->Request->SetActualStartPosition(timespan);
 				});
 
+				auto timespan = Windows::Foundation::TimeSpan();
+				timespan.Duration = 0;
+				streamSource->BufferTime = timespan;
 				streamState->_mediaStreamSource = streamSource;
 
 				// Use a lambda to capture a strong reference to RTMediaStreamSource.
@@ -142,7 +149,8 @@ namespace Org {
 				LOG(LS_INFO) << "RTMediaStreamSource::RTMediaStreamSource";
 
 				// Create the helper with the callback functions.
-				_helper.reset(new MediaSourceHelper(isH264,
+				_helper.reset(new MediaSourceHelper(
+					FrameTypeH264,
 					[this](cricket::VideoFrame* frame, IMFSample** sample) -> HRESULT {
 					return MakeSampleCallback(frame, sample);
 				},
@@ -219,7 +227,14 @@ namespace Org {
 
 			void RTMediaStreamSource::RTCRenderer::RenderFrame(
 				const cricket::VideoFrame *frame) {
+				auto stream = _streamSource.Resolve<RTMediaStreamSource>();
+				if (stream != nullptr) {
+					auto frameCopy = new cricket::WebRtcVideoFrame(
+						frame->video_frame_buffer(), frame->rotation(),
+						0);
 
+					stream->ProcessReceivedFrame(frameCopy);
+				}
 			}
 
 			void RTMediaStreamSource::ProgressTimerElapsedExecute(ThreadPoolTimer^ source) {
@@ -270,8 +285,8 @@ namespace Org {
 
 				//Fixme: it appears that MSS works well if we hardcode the sample duration with 33ms,
 				// Don' know why, override the value set by the mediahelper
-				LONGLONG duration = (LONGLONG)((1.0 / 30) * 1000 * 1000 * 10);
-				sampleData->sample.Get()->SetSampleDuration(duration);
+				//LONGLONG duration = (LONGLONG)((1.0 / 30) * 1000 * 1000 * 10);
+				//sampleData->sample.Get()->SetSampleDuration(duration);
 
 				hr = spRequest->SetSample(sampleData->sample.Get());
 
@@ -389,6 +404,9 @@ namespace Org {
 				webrtc::CriticalSectionScoped csLock(_lock.get());
 
 				if (_startingDeferral != nullptr) {
+					auto timespan = Windows::Foundation::TimeSpan();
+					timespan.Duration = 0;
+					_startingArgs->Request->SetActualStartPosition(timespan);
 					_startingDeferral->Complete();
 					_startingDeferral = nullptr;
 				}
@@ -409,7 +427,6 @@ namespace Org {
 		}
 	}
 }  // namespace Org.WebRtc.Internal
-*/
 
 void Org::WebRtc::FrameCounterHelper::FireEvent(String^ id,
   Platform::String^ str) {

@@ -597,14 +597,14 @@ namespace Org {
 			return asyncOp;
 		}
 
-		/*IMediaSource^ Media::CreateMediaStreamSource(
+		IMediaSource^ Media::CreateMediaStreamSource(
 			MediaVideoTrack^ track, uint32 framerate, String^ id) {
 			return globals::RunOnGlobalThread<MediaStreamSource^>([track, framerate,
 				id]()->MediaStreamSource^ {
 				return Org::WebRtc::Internal::RTMediaStreamSource::
 					CreateMediaSource(track, framerate, id);
 			});
-		}*/
+		}
 
 		IMediaSource^ Media::CreateMediaSource(
 			MediaVideoTrack^ track, String^ id) {
