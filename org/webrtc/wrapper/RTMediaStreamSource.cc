@@ -59,13 +59,17 @@ namespace Org {
 				// this is needed since the UI element might request sample before webrtc has
 				// incoming frame ready(ex.: remote stream), in this case, this initial value
 				// will make sure we will at least create a small dummy frame.
-				streamState->_videoDesc->EncodingProperties->Width = 480;
-				streamState->_videoDesc->EncodingProperties->Height = 1280;
+				streamState->_videoDesc->EncodingProperties->Width = 1280;
+				streamState->_videoDesc->EncodingProperties->Height = 480;
 
 				Org::WebRtc::ResolutionHelper::FireEvent(id,
 					streamState->_videoDesc->EncodingProperties->Width,
 					streamState->_videoDesc->EncodingProperties->Height);
 
+				// Note: Framerate is only an initial indicator for MediaFondation. 
+				// there is an internal thread that measures decode and render time.
+				// if the current device cannot handle the framerate, the engine will 
+				// reduce it to keep a steady rendering.
 				streamState->_videoDesc->EncodingProperties->FrameRate->Numerator =
 					frameRate;
 				streamState->_videoDesc->EncodingProperties->FrameRate->Denominator = 1;
@@ -77,15 +81,13 @@ namespace Org {
 					MediaStreamSourceStartingEventArgs ^>([streamState](
 						MediaStreamSource^ sender,
 						MediaStreamSourceStartingEventArgs^ args) {
-					// Get a deferall on the starting event so we can trigger it
+					// Get a deferall on the starting event and args so we can trigger it
 					// when the first frame arrives.
 					streamState->_startingArgs = args;
 					streamState->_startingDeferral = args->Request->GetDeferral();
-					//auto timespan = Windows::Foundation::TimeSpan();
-					//timespan.Duration = 0;
-					//args->Request->SetActualStartPosition(timespan);
 				});
 
+				// Set buffertime to 0 for rtc
 				auto timespan = Windows::Foundation::TimeSpan();
 				timespan.Duration = 0;
 				streamSource->BufferTime = timespan;
@@ -115,28 +117,6 @@ namespace Org {
 					sender->SampleRequested -= sampleRequestedCookie;
 				});
 
-				// Create a timer which sends request progress periodically.
-				{
-					auto handler = ref new TimerElapsedHandler(streamState,
-						&RTMediaStreamSource::ProgressTimerElapsedExecute);
-					auto timespan = Windows::Foundation::TimeSpan();
-					timespan.Duration = 500 * 1000 * 10;  // 500 ms in hns
-					streamState->_progressTimer = ThreadPoolTimer::CreatePeriodicTimer(
-						handler, timespan);
-				}
-
-				// Create a timer which ensures we don't display frames faster that expected.
-				// Required because Media Foundation sometimes requests samples in burst mode
-				// but we use the wall clock to drive timestamps.
-				{
-					auto handler = ref new TimerElapsedHandler(streamState,
-						&RTMediaStreamSource::FPSTimerElapsedExecute);
-					auto timespan = Windows::Foundation::TimeSpan();
-					timespan.Duration = 15 * 1000 * 10;
-					streamState->_fpsTimer = ThreadPoolTimer::CreatePeriodicTimer(handler,
-						timespan);
-				}
-
 				return streamSource;
 			}
 
@@ -144,7 +124,6 @@ namespace Org {
 				bool isH264) :
 				_videoTrack(videoTrack),
 				_lock(webrtc::CriticalSectionWrapper::CreateCriticalSection()),
-				_frameSentThisTime(false),
 				_frameBeingQueued(0) {
 				LOG(LS_INFO) << "RTMediaStreamSource::RTMediaStreamSource";
 
@@ -168,19 +147,12 @@ namespace Org {
 				LOG(LS_INFO) << "RTMediaStreamSource::Teardown() ID=" << _idUtf8;
 				{
 					webrtc::CriticalSectionScoped csLock(_lock.get());
-					if (_progressTimer != nullptr) {
-						_progressTimer->Cancel();
-						_progressTimer = nullptr;
-					}
-					if (_fpsTimer != nullptr) {
-						_fpsTimer->Cancel();
-						_fpsTimer = nullptr;
-					}
 					if (_rtcRenderer != nullptr && _videoTrack != nullptr) {
 						_videoTrack->UnsetRenderer(_rtcRenderer.get());
 					}
 
 					_videoTrack = nullptr;
+					_startingArgs = nullptr;
 
 					_request = nullptr;
 					if (_deferral != nullptr) {
@@ -191,6 +163,7 @@ namespace Org {
 						_startingDeferral->Complete();
 						_startingDeferral = nullptr;
 					}
+						
 					_helper.reset();
 				}
 
@@ -237,21 +210,6 @@ namespace Org {
 				}
 			}
 
-			void RTMediaStreamSource::ProgressTimerElapsedExecute(ThreadPoolTimer^ source) {
-				webrtc::CriticalSectionScoped csLock(_lock.get());
-				if (_request != nullptr) {
-					_request->ReportSampleProgress(1);
-				}
-			}
-
-			void RTMediaStreamSource::FPSTimerElapsedExecute(ThreadPoolTimer^ source) {
-				webrtc::CriticalSectionScoped csLock(_lock.get());
-				_frameSentThisTime = false;
-				if (_request != nullptr) {
-					ReplyToSampleRequest();
-				}
-			}
-
 			void RTMediaStreamSource::ReplyToSampleRequest() {
 				auto sampleData = _helper->DequeueFrame();
 				if (sampleData == nullptr) {
@@ -283,20 +241,12 @@ namespace Org {
 				HRESULT hr = reinterpret_cast<IInspectable*>(_request)->QueryInterface(
 					spRequest.ReleaseAndGetAddressOf());
 
-				//Fixme: it appears that MSS works well if we hardcode the sample duration with 33ms,
-				// Don' know why, override the value set by the mediahelper
-				//LONGLONG duration = (LONGLONG)((1.0 / 30) * 1000 * 1000 * 10);
-				//sampleData->sample.Get()->SetSampleDuration(duration);
-
 				hr = spRequest->SetSample(sampleData->sample.Get());
 
 				if (_deferral != nullptr) {
 					_deferral->Complete();
 				}
 
-				_frameSentThisTime = true;
-
-				_request = nullptr;
 				_deferral = nullptr;
 			}
 
@@ -381,7 +331,7 @@ namespace Org {
 						return;
 					}
 
-					if (!_frameSentThisTime && _helper->HasFrames()) {
+					if (_helper->HasFrames()) {
 						ReplyToSampleRequest();
 						return;
 					}
@@ -409,15 +359,20 @@ namespace Org {
 					_startingArgs->Request->SetActualStartPosition(timespan);
 					_startingDeferral->Complete();
 					_startingDeferral = nullptr;
+					_startingArgs = nullptr;
+
+					//TODO: Request a keyframe from the server when the first frame is received.
 				}
 
 				if (_helper == nullptr) {  // May be null while tearing down the MSS
 					return;
 				}
+
 				_helper->QueueFrame(frame);
 
-				// If we have a pending request, reply to it now.
-				if (_deferral != nullptr && _request != nullptr && !_frameSentThisTime) {
+				// Each frame will be pushed as soon as we have a request.
+				// The MediaEngine will handle timestamps and framerate rendering.
+				if (_request != nullptr) {
 					ReplyToSampleRequest();
 				}
 			}

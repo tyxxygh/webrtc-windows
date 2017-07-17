@@ -112,14 +112,6 @@ namespace Org {
 				std::unique_ptr<webrtc::CriticalSectionWrapper> _lock;
 
 				std::unique_ptr<MediaSourceHelper> _helper;
-
-				ThreadPoolTimer^ _progressTimer;
-				void ProgressTimerElapsedExecute(ThreadPoolTimer^ source);
-
-				ThreadPoolTimer^ _fpsTimer;
-				void FPSTimerElapsedExecute(ThreadPoolTimer^ source);
-				bool _frameSentThisTime;
-
 				Windows::Media::Core::VideoStreamDescriptor^ _videoDesc;
 
 				void ReplyToSampleRequest();

@@ -77,7 +77,7 @@ namespace Org {
 				if (_frameType == FrameTypeH264) {
 					// Check it is really a H.264 frame, the codec might have been switched within the call, in this case just ignore frames
 					if (frame->video_frame_buffer()->native_handle() != nullptr) {
-						// For H264 we keep all frames since they are encoded.
+						// Queue all encoded frames. 
 						_frames.push_back(frame);
 					} else {
 						// Delete the frame, it's not the expected codec
