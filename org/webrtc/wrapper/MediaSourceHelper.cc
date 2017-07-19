@@ -113,30 +113,11 @@ namespace Org {
 					data = DequeueI420Frame();
 				}
 
-				// Set the timestamp property
-				//if (_isFirstFrame) {
-				//	_isFirstFrame = false;
-				//	Org::WebRtc::FirstFrameRenderHelper::FireEvent(
-				//		rtc::Timing::WallTimeNow() * rtc::kNumMillisecsPerSec);
-				//	LONGLONG frameTime = GetNextSampleTimeHns(data->renderTime, _frameType == FrameTypeH264);
-				//	data->sample->SetSampleTime(frameTime);
-				//} else {
-				//	LONGLONG frameTime = GetNextSampleTimeHns(data->renderTime, _frameType == FrameTypeH264);
-
-				//	data->sample->SetSampleTime(frameTime);
-
-				//	// Set the duration property
-				//	if (_frameType == FrameTypeH264) {
-				//		LONGLONG duration = (LONGLONG)((1.0 / 60) * 1000 * 1000 * 10);
-				//		data->sample->SetSampleDuration(duration);
-				//	} else {
-				//		LONGLONG duration = (LONGLONG)((1.0 / 30) * 1000 * 1000 * 10);
-				//		data->sample->SetSampleDuration(duration);
-				//	}
-				//	_lastSampleTime = frameTime;
-				//}
-
-				UpdateFrameRate();
+				if (_isFirstFrame) {
+					_isFirstFrame = false;
+					Org::WebRtc::FirstFrameRenderHelper::FireEvent(
+						rtc::Timing::WallTimeNow() * rtc::kNumMillisecsPerSec);
+				} 
 
 				return data;
 			}
@@ -165,14 +146,11 @@ namespace Org {
 					if (tmp != nullptr) {
 						tmp->AddRef();
 						data->sample.Attach(tmp);
-						// Setting timestamp to 0 for real-time streaming a
-						// frame->set_timestamp_us(0);
-						// data->renderTime = frame->GetTimeStamp();
 
 						ComPtr<IMFAttributes> sampleAttributes;
 						data->sample.As(&sampleAttributes);
-						// sampleAttributes->SetUINT32(MFSampleExtension_Discontinuity, TRUE);
 						if (IsSampleIDR(tmp)) {
+							sampleAttributes->SetUINT32(MFSampleExtension_Discontinuity, TRUE);
 							sampleAttributes->SetUINT32(MFSampleExtension_CleanPoint, TRUE);
 						}
 					}
@@ -283,34 +261,6 @@ namespace Org {
 						std::unique_ptr<cricket::VideoFrame> frame(_frames.front());
 						_frames.pop_front();
 					}
-				}
-			}
-
-#define USE_WALL_CLOCK
-			LONGLONG MediaSourceHelper::GetNextSampleTimeHns(LONGLONG frameRenderTime, bool isH264) {
-				if (isH264) {
-#ifdef USE_WALL_CLOCK
-					if (_startTickTime == 0) {
-						_startTickTime = rtc::TimeMillis();
-						return 0;
-					}
-					// LONGLONG frameTime = ((rtc::TimeMillis() - _startTickTime) + _futureOffsetMs) * 1000 * 10;
-#else
-					if (_startTime == 0) {
-
-						_startTime = frameRenderTime;
-						// Return zero here so the first frame starts at zero.
-						// Only follow-up samples get an future offset.
-						return 0;
-					}
-
-					LONGLONG frameTime = (frameRenderTime - _startTime) / 100 + (_futureOffsetMs * 1000 * 10);
-#endif
-					// Returning 0 timestamp for h264 frames.
-					return 0;
-				} else {
-					// Non-encoded samples seem to work best with a zero timestamp.
-					return 0;
 				}
 			}
 

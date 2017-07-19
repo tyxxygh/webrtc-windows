@@ -87,11 +87,6 @@ namespace Org {
 				std::unique_ptr<SampleData> DequeueH264Frame();
 				std::unique_ptr<SampleData> DequeueI420Frame();
 
-
-				// Gets the next timestamp using the clock.
-				// Guarantees no duplicate timestamps.
-				LONGLONG GetNextSampleTimeHns(LONGLONG frameRenderTime, bool isH264);
-
 				void CheckForAttributeChanges(cricket::VideoFrame* frame, SampleData* data);
 
 				std::function<HRESULT(cricket::VideoFrame* frame, IMFSample** sample)> _mkSample;
