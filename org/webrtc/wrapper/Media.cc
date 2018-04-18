@@ -26,6 +26,7 @@
 #include "webrtc/rtc_base/criticalsection.h"
 #include "webrtc/common_video/video_common_winuwp.h"
 #include "third_party/winuwp_h264/H264Decoder/H264Decoder.h"
+#include "RTMediaStreamSource.h"
 
 using Platform::Collections::Vector;
 using Org::WebRtc::Internal::ToCx;
@@ -387,8 +388,10 @@ namespace Org {
 					_frameType = Internal::FrameTypeH264;
 
 				auto handler = ref new DispatchedHandler([this]() {
-					_mediaSource = Internal::RTMediaStreamSource::CreateMediaSource(nullptr, _frameType, _id);
-					_mediaElement->SetMediaStreamSource(_mediaSource->GetMediaStreamSource());
+					// Org::WebRtc::Internal::WebRtcMediaSource::CreateMediaSource(&_mediaSource, _frameType, _id);
+
+					//IMediaSource^ source = reinterpret_cast<IMediaSource^>(_mediaSource.Get());
+					// _mediaElement->SetMediaStreamSource(source);
 				});
 
 				Windows::UI::Core::CoreDispatcher^ windowDispatcher =
@@ -551,7 +554,20 @@ namespace Org {
 			});
 		}
 
-		void Media::AddVideoTrackMediaElementPair(MediaVideoTrack^ track, MediaElement^ mediaElement, String^ id) {
+		IMediaSource^ Media::CreateMediaSource(
+			MediaVideoTrack^ track, String^ type, String^ id) {
+			return globals::RunOnGlobalThread<IMediaSource^>([track, type, id]() -> IMediaSource^ {
+				Internal::VideoFrameType frameType;
+				frameType = _wcsicmp(type->Data(), L"h264") == 0 ? frameType = Internal::VideoFrameType::FrameTypeH264 : Internal::VideoFrameType::FrameTypeI420;
+
+				ComPtr<Org::WebRtc::Internal::WebRtcMediaSource> comSource;
+				Org::WebRtc::Internal::WebRtcMediaSource::CreateMediaSource(&comSource, track, frameType, id);
+				IMediaSource^ source = reinterpret_cast<IMediaSource^>(comSource.Get());
+				return source;
+			});
+		}
+
+		/*void Media::AddVideoTrackMediaElementPair(MediaVideoTrack^ track, MediaElement^ mediaElement, String^ id) {
 			std::list<std::unique_ptr<VideoTrackMediaElementPair>>::iterator iter =
 				_videoTrackMediaElementPairList.begin();
 			while (iter != _videoTrackMediaElementPairList.end()) {
@@ -584,7 +600,7 @@ namespace Org {
 				}
 				iter++;
 			}
-		}
+		}*/
 
 		RawVideoSource^ Media::CreateRawVideoSource(MediaVideoTrack^ track) {
 			return ref new RawVideoSource(track);

@@ -32,77 +32,77 @@ using Windows::System::Threading::ThreadPoolTimer;
 #define INITIAL_FRAME_RATE			30
 #define INITIAL_SKIPPED_TIME		3000
 
-namespace Org {
-	namespace WebRtc {
-		/// <summary>
-		/// Delegate used to notify an update of the frame per second on a video stream.
-		/// </summary>
-		public delegate void FramesPerSecondChangedEventHandler(String^ id,
-			Platform::String^ fps);
-
-		/// <summary>
-		/// Delegate used to notify an update of the frame resolutions.
-		/// </summary>
-		public delegate void ResolutionChangedEventHandler(String^ id,
-			unsigned int width, unsigned int height);
-
-		/// <summary>
-		/// Class used to get frame rate events from renderer.
-		/// </summary>
-		public ref class FrameCounterHelper sealed {
-		public:
-			/// <summary>
-			/// Event fires when the frame rate changes.
-			/// </summary>
-			static event FramesPerSecondChangedEventHandler^ FramesPerSecondChanged;
-		internal:
-			static void FireEvent(String^ id, Platform::String^ str);
-		};
-
-		/// <summary>
-		/// Class used to get frame size change events from renderer.
-		/// </summary>
-		public ref class ResolutionHelper sealed {
-		public:
-			/// <summary>
-			/// Event fires when the resolution changes.
-			/// </summary>
-			static event ResolutionChangedEventHandler^ ResolutionChanged;
-		internal:
-			static void FireEvent(String^ id, unsigned int width, unsigned int height);
-		};
-
-		void Org::WebRtc::FrameCounterHelper::FireEvent(String^ id,
-			Platform::String^ str) {
-			Windows::UI::Core::CoreDispatcher^ windowDispatcher = webrtc::VideoCommonWinUWP::GetCoreDispatcher();
-			if (windowDispatcher != nullptr) {
-				windowDispatcher->RunAsync(
-					Windows::UI::Core::CoreDispatcherPriority::Normal,
-					ref new Windows::UI::Core::DispatchedHandler([id, str] {
-					FramesPerSecondChanged(id, str);
-				}));
-			}
-			else {
-				FramesPerSecondChanged(id, str);
-			}
-		}
-
-		void Org::WebRtc::ResolutionHelper::FireEvent(String^ id,
-			unsigned int width, unsigned int heigth) {
-			Windows::UI::Core::CoreDispatcher^ windowDispatcher = webrtc::VideoCommonWinUWP::GetCoreDispatcher();
-			if (windowDispatcher != nullptr) {
-				windowDispatcher->RunAsync(
-					Windows::UI::Core::CoreDispatcherPriority::Normal,
-					ref new Windows::UI::Core::DispatchedHandler([id, width, heigth] {
-					ResolutionChanged(id, width, heigth);
-				}));
-			}
-			else {
-				ResolutionChanged(id, width, heigth);
-			}
-		}
-	}
-}
+//namespace Org {
+//	namespace WebRtc {
+//		/// <summary>
+//		/// Delegate used to notify an update of the frame per second on a video stream.
+//		/// </summary>
+//		public delegate void FramesPerSecondChangedEventHandler(String^ id,
+//			Platform::String^ fps);
+//
+//		/// <summary>
+//		/// Delegate used to notify an update of the frame resolutions.
+//		/// </summary>
+//		public delegate void ResolutionChangedEventHandler(String^ id,
+//			unsigned int width, unsigned int height);
+//
+//		/// <summary>
+//		/// Class used to get frame rate events from renderer.
+//		/// </summary>
+//		public ref class FrameCounterHelper sealed {
+//		public:
+//			/// <summary>
+//			/// Event fires when the frame rate changes.
+//			/// </summary>
+//			static event FramesPerSecondChangedEventHandler^ FramesPerSecondChanged;
+//		internal:
+//			static void FireEvent(String^ id, Platform::String^ str);
+//		};
+//
+//		/// <summary>
+//		/// Class used to get frame size change events from renderer.
+//		/// </summary>
+//		public ref class ResolutionHelper sealed {
+//		public:
+//			/// <summary>
+//			/// Event fires when the resolution changes.
+//			/// </summary>
+//			static event ResolutionChangedEventHandler^ ResolutionChanged;
+//		internal:
+//			static void FireEvent(String^ id, unsigned int width, unsigned int height);
+//		};
+//
+//		void Org::WebRtc::FrameCounterHelper::FireEvent(String^ id,
+//			Platform::String^ str) {
+//			Windows::UI::Core::CoreDispatcher^ windowDispatcher = webrtc::VideoCommonWinUWP::GetCoreDispatcher();
+//			if (windowDispatcher != nullptr) {
+//				windowDispatcher->RunAsync(
+//					Windows::UI::Core::CoreDispatcherPriority::Normal,
+//					ref new Windows::UI::Core::DispatchedHandler([id, str] {
+//					FramesPerSecondChanged(id, str);
+//				}));
+//			}
+//			else {
+//				FramesPerSecondChanged(id, str);
+//			}
+//		}
+//
+//		void Org::WebRtc::ResolutionHelper::FireEvent(String^ id,
+//			unsigned int width, unsigned int heigth) {
+//			Windows::UI::Core::CoreDispatcher^ windowDispatcher = webrtc::VideoCommonWinUWP::GetCoreDispatcher();
+//			if (windowDispatcher != nullptr) {
+//				windowDispatcher->RunAsync(
+//					Windows::UI::Core::CoreDispatcherPriority::Normal,
+//					ref new Windows::UI::Core::DispatchedHandler([id, width, heigth] {
+//					ResolutionChanged(id, width, heigth);
+//				}));
+//			}
+//			else {
+//				ResolutionChanged(id, width, heigth);
+//			}
+//		}
+//	}
+//}
 
 namespace Org {
 	namespace WebRtc {

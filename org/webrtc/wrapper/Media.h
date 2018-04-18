@@ -19,7 +19,8 @@
 #include "WinUWPDeviceManager.h"
 #include "webrtc/modules/audio_device/include/audio_device.h"
 #include "Delegates.h"
-#include "RTMediaStreamSource.h"
+
+#include "WebRtcMediaSource.h"
 
 using Platform::String;
 using Windows::Foundation::IAsyncOperation;
@@ -518,7 +519,7 @@ namespace Org {
 				Internal::VideoFrameType _frameType;
 				MediaElement^ _mediaElement;
 				String^ _id;
-				Internal::RTMediaStreamSource^ _mediaSource;
+				ComPtr<Org::WebRtc::Internal::WebRtcMediaSource> _mediaSource;
 			};
 
 			struct VideoTrackMediaElementPair {
@@ -563,23 +564,39 @@ namespace Org {
 			IMediaSource^ CreateMediaStreamSource(MediaVideoTrack^ track, String^ type, String^ id);
 
 			/// <summary>
-			/// Adds Video Track and Media Element piar structure to keep a reference
-			/// of which video frame source is connected to which video surface. When
-			/// first video frame arrives from Video Track, Media class creates raw video
-			/// or H.264 Custom Media Source object and it is attached as a media source
-			/// to Media Element object.
+			/// Creates an <see cref="IMediaSource"/> for a video track, with a given
+			/// frame rate and identifier to be used for notifications on media
+			/// changes.
 			/// </summary>
-			/// <param name="track">Video track used as a frame source</param>
-			/// <param name="mediaElement">Rendering surface</param>
-			/// <param name="id">Identifier for media source.</param>
-			void AddVideoTrackMediaElementPair(MediaVideoTrack^ track, MediaElement^ mediaElement, String^ id);
+			/// <param name="track">Video track to create a <see cref="IMediaSource"/>
+			/// from</param>
+			/// <param name="framerate">Target frame rate</param>
+			/// <param name="id">Identifier that can be used by applications for
+			/// distinguishing between <see cref="MediaStream"/>s
+			/// when receiving media change event notifications.
+			/// </param>
+			/// <returns>A media source.</returns>
+			IMediaSource^ CreateMediaSource(
+				MediaVideoTrack^ track, String^ type, String^ id);
 
-			/// <summary>
-			/// Removes Video Track and Media Element piar structure from list of pairs.
-			/// </summary>
-			/// <param name="track">Video track used as a frame source which ientifies
-			/// the pair to be removed</param>
-			void RemoveVideoTrackMediaElementPair(MediaVideoTrack^ track);
+			///// <summary>
+			///// Adds Video Track and Media Element piar structure to keep a reference
+			///// of which video frame source is connected to which video surface. When
+			///// first video frame arrives from Video Track, Media class creates raw video
+			///// or H.264 Custom Media Source object and it is attached as a media source
+			///// to Media Element object.
+			///// </summary>
+			///// <param name="track">Video track used as a frame source</param>
+			///// <param name="mediaElement">Rendering surface</param>
+			///// <param name="id">Identifier for media source.</param>
+			//void AddVideoTrackMediaElementPair(MediaVideoTrack^ track, MediaElement^ mediaElement, String^ id);
+
+			///// <summary>
+			///// Removes Video Track and Media Element piar structure from list of pairs.
+			///// </summary>
+			///// <param name="track">Video track used as a frame source which ientifies
+			///// the pair to be removed</param>
+			//void RemoveVideoTrackMediaElementPair(MediaVideoTrack^ track);
 
 			/// <summary>
 			/// Creates an <see cref="RawVideoSource"/> for a video track.

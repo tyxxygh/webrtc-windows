@@ -91,9 +91,8 @@ namespace Org {
 				// In degrees.  In practice it can only be 0, 90, 180 or 270.
 				int _lastRotation;
 
-				std::unique_ptr<SampleData> DequeueH264Frame(int64_t &frameTimestamp);
-				std::unique_ptr<SampleData> DequeueI420Frame(int64_t &frameTimestamp);
-
+				std::unique_ptr<SampleData> DequeueH264Frame();
+				std::unique_ptr<SampleData> DequeueI420Frame();
 
 				// Gets the next timestamp using the clock.
 				// Guarantees no duplicate timestamps.

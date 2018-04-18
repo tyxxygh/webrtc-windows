@@ -162,7 +162,8 @@ namespace Org {
 			/// <param name="fps">Frames per second.</param>
 			static void SetPreferredVideoCaptureFormat(int frameWidth,
 				int frameHeight,
-				int fps);
+				int fps,
+				bool enableMRC);
 
 			/// <summary>
 			/// Synchronization with NTP is needed for end to end delay measurements,

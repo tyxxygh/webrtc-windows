@@ -32,6 +32,7 @@
 #include "webrtc/rtc_base/timeutils.h"
 #include "third_party/winuwp_h264/winuwp_h264_factory.h"
 #include "webrtc/common_video/video_common_winuwp.h"
+#include "webrtc/modules/video_capture/windows/video_capture_winuwp.h"
 
 using Org::WebRtc::Internal::FromCx;
 using Org::WebRtc::Internal::ToCx;
@@ -440,6 +441,10 @@ namespace Org {
 			globals::RunOnGlobalThread<void>([this] {
 				rtc::CritScope lock(&_critSect);
 
+				webrtc::videocapturemodule::MediaCaptureDevicesWinUWP::Instance()->
+					ClearCaptureDevicesCache();
+
+
 				if (_impl.get()) {
 					_impl->Close();
 				}
@@ -786,7 +791,8 @@ namespace Org {
 		}
 
 		void WebRTC::SetPreferredVideoCaptureFormat(int frameWidth,
-			int frameHeight, int fps) {
+			int frameHeight, int fps, bool enableMRC) {
+			webrtc::videocapturemodule::VideoCaptureWinUWP::EnableHoloLensMRC = enableMRC;
 			globals::gPreferredVideoCaptureFormat.interval =
 				cricket::VideoFormat::FpsToInterval(fps);
 			globals::gPreferredVideoCaptureFormat.width = frameWidth;
