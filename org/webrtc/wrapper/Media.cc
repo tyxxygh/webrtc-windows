@@ -16,17 +16,16 @@
 #include <set>
 #include "PeerConnectionInterface.h"
 #include "Marshalling.h"
-#include "WebRtcMediaSource.h"
-#include "webrtc/base/logging.h"
+#include "webrtc/rtc_base/logging.h"
 #include "webrtc/media/base/videosourceinterface.h"
 #include "webrtc/pc/channelmanager.h"
 #include "webrtc/media/base/mediaengine.h"
 #include "webrtc/api/test/fakeconstraints.h"
 #include "webrtc/modules/video_capture/windows/device_info_winuwp.h"
 #include "webrtc/modules/video_capture/windows/video_capture_winuwp.h"
-#include "webrtc/system_wrappers/include/critical_section_wrapper.h"
-#include "webrtc/voice_engine/include/voe_hardware.h"
+#include "webrtc/rtc_base/criticalsection.h"
 #include "webrtc/common_video/video_common_winuwp.h"
+#include "third_party/winuwp_h264/H264Decoder/H264Decoder.h"
 
 using Platform::Collections::Vector;
 using Org::WebRtc::Internal::ToCx;
@@ -44,8 +43,7 @@ using Windows::UI::Core::CoreDispatcherPriority;
 namespace {
   IVector<Org::WebRtc::MediaDevice^>^ g_videoDevices = ref new Vector<Org::WebRtc::MediaDevice^>();
 
-  webrtc::CriticalSectionWrapper& g_videoDevicesLock(
-    *webrtc::CriticalSectionWrapper::CreateCriticalSection());
+  rtc::CriticalSection g_videoDevicesCritSect;
 }
 
 namespace Org {
@@ -287,16 +285,18 @@ namespace Org {
 		}
 
 		void RawVideoStream::RenderFrame(const webrtc::VideoFrame* frame) {
+			rtc::scoped_refptr<webrtc::PlanarYuvBuffer> frameBuffer =
+				static_cast<webrtc::PlanarYuvBuffer*>(frame->video_frame_buffer().get());
 			_videoSource->RawVideoFrame((uint32)frame->width(), (uint32)frame->height(),
-				Platform::ArrayReference<uint8>((uint8*)frame->video_frame_buffer()->DataY(),
-				(unsigned int)(frame->video_frame_buffer()->StrideY() * frame->height())),
-				frame->video_frame_buffer()->StrideY(),
-				Platform::ArrayReference<uint8>((uint8*)frame->video_frame_buffer()->DataU(),
-				(unsigned int)(frame->video_frame_buffer()->StrideU() * ((frame->height() + 1) / 2))),
-				frame->video_frame_buffer()->StrideU(),
-				Platform::ArrayReference<uint8>((uint8*)frame->video_frame_buffer()->DataV(),
-				(unsigned int)(frame->video_frame_buffer()->StrideV() * ((frame->height() + 1) / 2))),
-				frame->video_frame_buffer()->StrideV());
+				Platform::ArrayReference<uint8>((uint8*)frameBuffer->DataY(),
+				(unsigned int)(frameBuffer->StrideY() * frame->height())),
+				frameBuffer->StrideY(),
+				Platform::ArrayReference<uint8>((uint8*)frameBuffer->DataU(),
+				(unsigned int)(frameBuffer->StrideU() * ((frame->height() + 1) / 2))),
+				frameBuffer->StrideU(),
+				Platform::ArrayReference<uint8>((uint8*)frameBuffer->DataV(),
+				(unsigned int)(frameBuffer->StrideV() * ((frame->height() + 1) / 2))),
+				frameBuffer->StrideV());
 		}
 
 		// = RawVideoSource =============================================================
@@ -325,7 +325,9 @@ namespace Org {
 		}
 
 		void EncodedVideoStream::RenderFrame(const webrtc::VideoFrame* frame) {
-			ComPtr<IMFSample> pSample = (IMFSample*)frame->video_frame_buffer()->native_handle();
+			rtc::scoped_refptr<webrtc::NativeHandleBuffer> frameBuffer =
+				static_cast<webrtc::NativeHandleBuffer*>(frame->video_frame_buffer().get());
+			ComPtr<IMFSample> pSample = (IMFSample*)frameBuffer->native_handle();
 			if (pSample == nullptr)
 				return;
 			ComPtr<IMFMediaBuffer> pBuffer;
@@ -378,17 +380,14 @@ namespace Org {
 
 		void Media::VideoFrameSink::OnFrame(const webrtc::VideoFrame& frame) {
 			if (_mediaSource == nullptr) {
-				if (frame.video_frame_buffer()->native_handle() == nullptr)
+				if (frame.video_frame_buffer()->ToI420() != nullptr)
 					_frameType = Internal::FrameTypeI420;
 				else
 					_frameType = Internal::FrameTypeH264;
 
 				auto handler = ref new DispatchedHandler([this]() {
-					Internal::WebRtcMediaSource::CreateMediaSource(&_mediaSource, _frameType, _id);
-					ComPtr<ABI::Windows::Media::Core::IMediaSource> comSource;
-					_mediaSource.As(&comSource);
-					IMediaSource^ source = reinterpret_cast<IMediaSource^>(comSource.Get());
-					_mediaElement->SetMediaStreamSource(source);
+					_mediaSource = Internal::RTMediaStreamSource::CreateMediaSource(_frameType, _id);
+					_mediaElement->SetMediaStreamSource(_mediaSource->GetMediaStreamSource());
 				});
 
 				Windows::UI::Core::CoreDispatcher^ windowDispatcher =
@@ -407,8 +406,8 @@ namespace Org {
 
 		Media::Media() :
 			_videoCaptureDeviceChanged(true) {
-			_dev_manager = std::unique_ptr<cricket::WinUWPDeviceManager>
-				(cricket::DeviceManagerFactory::Create());
+			_dev_manager = std::unique_ptr<Internal::WinUWPDeviceManager>
+				(Internal::DeviceManagerFactory::Create());
 
 			if (!_dev_manager->Init()) {
 				LOG(LS_ERROR) << "Can't create device manager";
@@ -479,7 +478,7 @@ namespace Org {
 								: nullptr;
 						}
 						else {
-							webrtc::CriticalSectionScoped cs(&g_videoDevicesLock);
+							rtc::CritScope lock(&g_videoDevicesCritSect);
 							// Make sure the selected video device is still connected
 							for (auto& capturer : videoDevices) {
 								if (capturer.id == _selectedVideoDevice.id) {
@@ -515,7 +514,7 @@ namespace Org {
 							constraints.SetMandatory(webrtc::MediaConstraintsInterface::kMinHeight, globals::gPreferredVideoCaptureFormat.height);
 							constraints.SetMandatory(webrtc::MediaConstraintsInterface::kMaxWidth, globals::gPreferredVideoCaptureFormat.width);
 							constraints.SetMandatory(webrtc::MediaConstraintsInterface::kMaxHeight, globals::gPreferredVideoCaptureFormat.height);
-							constraints.SetMandatoryMaxFrameRate(cricket::VideoFormat::IntervalToFps(globals::gPreferredVideoCaptureFormat.height));
+							constraints.SetMandatoryMaxFrameRate(cricket::VideoFormat::IntervalToFps(globals::gPreferredVideoCaptureFormat.interval));
 
 							LOG(LS_INFO) << "Creating video track.";
 							rtc::scoped_refptr<webrtc::VideoTrackInterface> video_track(
@@ -536,12 +535,11 @@ namespace Org {
 			return asyncOp;
 		}
 
-		IMediaSource^ Media::CreateMediaStreamSource(
-			MediaVideoTrack^ track, uint32 framerate, String^ id) {
-			return globals::RunOnGlobalThread<MediaStreamSource^>([track, framerate,
-				id]()->MediaStreamSource^ {
-				return Org::WebRtc::Internal::RTMediaStreamSource::
-					CreateMediaSource(track, framerate, id);
+		IMediaSource^ Media::CreateMediaStreamSource(String^ id) {
+			return globals::RunOnGlobalThread<MediaStreamSource^>([id]()->MediaStreamSource^ {
+				Internal::RTMediaStreamSource^ mediaSource =
+					Internal::RTMediaStreamSource::CreateMediaSource(Internal::VideoFrameType::FrameTypeH264, id);
+				return mediaSource->GetMediaStreamSource();
 			});
 		}
 
@@ -580,16 +578,6 @@ namespace Org {
 			}
 		}
 
-		IMediaSource^ Media::CreateMediaSource(
-			MediaVideoTrack^ track, String^ id) {
-			return globals::RunOnGlobalThread<IMediaSource^>([track, id]() -> IMediaSource^ {
-				ComPtr<Org::WebRtc::Internal::WebRtcMediaSource> comSource;
-				Org::WebRtc::Internal::WebRtcMediaSource::CreateMediaSource(&comSource, Internal::FrameTypeH264, id);
-				IMediaSource^ source = reinterpret_cast<IMediaSource^>(comSource.Get());
-				return source;
-			});
-		}
-
 		RawVideoSource^ Media::CreateRawVideoSource(MediaVideoTrack^ track) {
 			return ref new RawVideoSource(track);
 		}
@@ -599,7 +587,7 @@ namespace Org {
 		}
 
 		IVector<MediaDevice^>^ Media::GetVideoCaptureDevices() {
-			webrtc::CriticalSectionScoped cs(&g_videoDevicesLock);
+			rtc::CritScope lock(&g_videoDevicesCritSect);
 			std::vector<cricket::Device> videoDevices;
 			DeviceInformationCollection^ dev_info_collection = nullptr;
 
@@ -647,7 +635,7 @@ namespace Org {
 		}
 
 		void Media::SelectVideoDevice(MediaDevice^ device) {
-			webrtc::CriticalSectionScoped cs(&g_videoDevicesLock);
+			rtc::CritScope lock(&g_videoDevicesCritSect);
 			_selectedVideoDevice.id = "";
 			_selectedVideoDevice.name = "";
 			for (auto videoDev : g_videoDevices) {

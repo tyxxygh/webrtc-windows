@@ -7,8 +7,8 @@
 // in the file PATENTS.  All contributing project authors may
 // be found in the AUTHORS file in the root of the source tree.
 
-#ifndef WEBRTC_BUILD_WINUWP_GYP_API_MEDIA_H_
-#define WEBRTC_BUILD_WINUWP_GYP_API_MEDIA_H_
+#ifndef ORG_WEBRTC_MEDIA_H_
+#define ORG_WEBRTC_MEDIA_H_
 
 #include <mfidl.h>
 #include <collection.h>
@@ -16,10 +16,9 @@
 #include "webrtc/api/mediastreaminterface.h"
 #include "webrtc/api/mediaconstraintsinterface.h"
 #include "GlobalObserver.h"
-#include "webrtc/media/devices/winuwpdevicemanager.h"
+#include "WinUWPDeviceManager.h"
 #include "webrtc/modules/audio_device/include/audio_device.h"
 #include "Delegates.h"
-#include "WebRtcMediaSource.h"
 #include "RTMediaStreamSource.h"
 
 using Platform::String;
@@ -497,7 +496,7 @@ namespace Org {
 				Internal::VideoFrameType _frameType;
 				MediaElement^ _mediaElement;
 				String^ _id;
-				ComPtr<Internal::WebRtcMediaSource> _mediaSource;
+				Internal::RTMediaStreamSource^ _mediaSource;
 			};
 
 			struct VideoTrackMediaElementPair {
@@ -531,18 +530,15 @@ namespace Org {
 				RTCMediaStreamConstraints^ mediaStreamConstraints);
 
 			/// <summary>
-			/// Creates an <see cref="IMediaSource"/> for a video track, with a given
+			/// Creates an <see cref="IMediaSource"/>  for H264 frames with a given
 			/// identifier to be used for notifications on media changes.
 			/// </summary>
-			/// <param name="track">Video track to create a <see cref="IMediaSource"/>
-			/// from</param>
 			/// <param name="id">Identifier that can be used by applications for
 			/// distinguishing between <see cref="MediaStream"/>s
 			/// when receiving media change event notifications.
 			/// </param>
 			/// <returns>A media source.</returns>
-			IMediaSource^ CreateMediaStreamSource(
-				MediaVideoTrack^ track, uint32 framerate, String^ id);
+			IMediaSource^ CreateMediaStreamSource(String^ id);
 
 			/// <summary>
 			/// Adds Video Track and Media Element piar structure to keep a reference
@@ -562,22 +558,6 @@ namespace Org {
 			/// <param name="track">Video track used as a frame source which ientifies
 			/// the pair to be removed</param>
 			void RemoveVideoTrackMediaElementPair(MediaVideoTrack^ track);
-
-			/// <summary>
-			/// Creates an <see cref="IMediaSource"/> for a video track, with a given
-			/// frame rate and identifier to be used for notifications on media
-			/// changes.
-			/// </summary>
-			/// <param name="track">Video track to create a <see cref="IMediaSource"/>
-			/// from</param>
-			/// <param name="framerate">Target frame rate</param>
-			/// <param name="id">Identifier that can be used by applications for
-			/// distinguishing between <see cref="MediaStream"/>s
-			/// when receiving media change event notifications.
-			/// </param>
-			/// <returns>A media source.</returns>
-			IMediaSource^ CreateMediaSource(
-				MediaVideoTrack^ track, String^ id);
 
 			/// <summary>
 			/// Creates an <see cref="RawVideoSource"/> for a video track.
@@ -639,7 +619,7 @@ namespace Org {
 			void OnMediaDeviceRemoved(DeviceWatcher^ sender,
 				DeviceInformationUpdate^ args);
 
-			std::unique_ptr<cricket::WinUWPDeviceManager> _dev_manager;
+			std::unique_ptr<Internal::WinUWPDeviceManager> _dev_manager;
 			cricket::Device _selectedVideoDevice;
 
 			std::list<std::unique_ptr<VideoTrackMediaElementPair>> _videoTrackMediaElementPairList;
@@ -650,4 +630,4 @@ namespace Org {
 	}
 }  // namespace Org.WebRtc
 
-#endif  // WEBRTC_BUILD_WINUWP_GYP_API_MEDIA_H_
+#endif  // ORG_WEBRTC_MEDIA_H_
