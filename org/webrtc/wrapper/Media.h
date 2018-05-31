@@ -487,8 +487,10 @@ namespace Org {
 		public ref class EncodedVideoSource sealed {
 			internal:
 			EncodedVideoSource(MediaVideoTrack^ track);
-			void EncodedVideoFrame(uint32 width, uint32 height,
-			const Platform::Array<uint8>^ frameData);
+			void EncodedVideoFrame(
+				uint32 width, uint32 height,
+				const Platform::Array<uint8>^ frameData,
+				Platform::IBox<VideoFrameMetadata>^ frameMetadata = nullptr);
 		public:
 			/// <summary>
 			/// Raw video frame has been received.

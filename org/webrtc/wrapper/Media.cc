@@ -343,8 +343,16 @@ namespace Org {
 				LOG(LS_ERROR) << "Failed to lock buffer.";
 				return;
 			}
-			_videoSource->EncodedVideoFrame((uint32)frame->width(), (uint32)frame->height(),
-			Platform::ArrayReference<uint8>((uint8*)pBytes, curLength));
+
+			// Sets the prediction timestamp.
+			VideoFrameMetadata frameMetadata = { 0 };
+			frameMetadata.predictionTimestamp = -1;
+
+			_videoSource->EncodedVideoFrame(
+				(uint32)frame->width(), (uint32)frame->height(),
+				Platform::ArrayReference<uint8>((uint8*)pBytes, curLength),
+				ref new Platform::Box<VideoFrameMetadata>(frameMetadata));
+
 			if (FAILED(pBuffer->Unlock())) {
 				LOG(LS_ERROR) << "Failed to unlock buffer";
 				return;
@@ -359,9 +367,11 @@ namespace Org {
 			_track->SetRenderer(_videoStream.get());
 		}
 
-		void EncodedVideoSource::EncodedVideoFrame(uint32 width, uint32 height,
-		const Platform::Array<uint8>^ frameData) {
-			OnEncodedVideoFrame(width, height, frameData);
+		void EncodedVideoSource::EncodedVideoFrame(
+			uint32 width, uint32 height,
+			const Platform::Array<uint8>^ frameData,
+			Platform::IBox<VideoFrameMetadata>^ frameMetadata) {
+			OnEncodedVideoFrame(width, height, frameData, frameMetadata);
 		}
 
 		EncodedVideoSource::~EncodedVideoSource() {
