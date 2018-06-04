@@ -174,6 +174,7 @@ namespace Org {
 				_frames.pop_front();
 
 				std::unique_ptr<SampleData> data(new SampleData);
+				data->predictionTimestamp = frame->prediction_timestamp();
 
 				// Get the IMFSample in the frame.
 				{

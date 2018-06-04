@@ -333,6 +333,7 @@ namespace Org {
 					frameCopy->set_ntp_time_ms(frame->ntp_time_ms());
 					frameCopy->set_timestamp(frame->timestamp());
 					frameCopy->set_timestamp_us(frame->timestamp_us());
+					frameCopy->set_prediction_timestamp(frame->prediction_timestamp());
 
 					stream->ProcessReceivedFrame(frameCopy);
 				}

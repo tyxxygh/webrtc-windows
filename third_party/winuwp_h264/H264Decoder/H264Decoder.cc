@@ -110,13 +110,12 @@ int WinUWPH264DecoderImpl::Decode(const EncodedImage& input_image,
 
   UpdateVideoFrameDimensions(input_image);
   auto sample = FromEncodedImage(input_image);
-
   if (sample != nullptr) {
     rtc::scoped_refptr<VideoFrameBuffer> buffer(new rtc::RefCountedObject<H264NativeHandleBuffer>(
       sample, width_, height_));
     VideoFrame decodedFrame(buffer, input_image._timeStamp, render_time_ms, kVideoRotation_0);
     decodedFrame.set_ntp_time_ms(input_image.ntp_time_ms_);
-
+	decodedFrame.set_prediction_timestamp(input_image.prediction_timestamp_);
     rtc::CritScope lock(&crit_);
 
     if (decodeCompleteCallback_ != nullptr) {
