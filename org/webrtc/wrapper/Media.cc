@@ -346,7 +346,7 @@ namespace Org {
 
 			// Sets the prediction timestamp.
 			VideoFrameMetadata frameMetadata = { 0 };
-			frameMetadata.predictionTimestamp = -1;
+			frameMetadata.predictionTimestamp = frame->prediction_timestamp();
 
 			_videoSource->EncodedVideoFrame(
 				(uint32)frame->width(), (uint32)frame->height(),
@@ -549,7 +549,16 @@ namespace Org {
 			return asyncOp;
 		}
 
-		IMediaSource^ Media::CreateMediaStreamSource(MediaVideoTrack^ track, String^ type, String^ id) {
+		IMediaSource^ Media::CreateMediaStreamSource(
+			MediaVideoTrack^ track, String^ type, String^ id) {
+			return CreateMediaStreamSource(track, type, id, 0, 0, nullptr, nullptr);
+		}
+
+		IMediaSource^ Media::CreateMediaStreamSource(
+			MediaVideoTrack^ track, String^ type, String^ id,
+			uint32 width, uint32 height,
+			PredictionTimestampDelegate^ predictionTimestampDelegate,
+			FpsReportDelegate^ fpsReportDelegate) {
 			Internal::VideoFrameType frameType;
 			if (_wcsicmp(type->Data(), L"i420") == 0)
 				frameType = Internal::VideoFrameType::FrameTypeI420;
@@ -557,9 +566,11 @@ namespace Org {
 				frameType = Internal::VideoFrameType::FrameTypeH264;
 			else
 				return nullptr;
-			return globals::RunOnGlobalThread<MediaStreamSource^>([track, frameType, id]()->MediaStreamSource^ {
+			return globals::RunOnGlobalThread<MediaStreamSource^>(
+				[track, frameType, id, width, height, predictionTimestampDelegate, fpsReportDelegate]()->MediaStreamSource^ {
 				Internal::RTMediaStreamSource^ mediaSource =
-					Internal::RTMediaStreamSource::CreateMediaSource(track, frameType, id);
+					Internal::RTMediaStreamSource::CreateMediaSource(
+						track, frameType, id, width, height, predictionTimestampDelegate, fpsReportDelegate);
 				return mediaSource->GetMediaStreamSource();
 			});
 		}

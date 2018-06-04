@@ -563,7 +563,23 @@ namespace Org {
 			/// when receiving media change event notifications.
 			/// </param>
 			/// <returns>A media source.</returns>
-			IMediaSource^ CreateMediaStreamSource(MediaVideoTrack^ track, String^ type, String^ id);
+			IMediaSource^ CreateMediaStreamSource(
+				MediaVideoTrack^ track, String^ type, String^ id);
+
+			/// <summary>
+			/// Creates an <see cref="IMediaSource"/>  for H264 frames with a given
+			/// identifier to be used for notifications on media changes.
+			/// </summary>
+			/// <param name="id">Identifier that can be used by applications for
+			/// distinguishing between <see cref="MediaStream"/>s
+			/// when receiving media change event notifications.
+			/// </param>
+			/// <returns>A media source.</returns>
+			IMediaSource^ CreateMediaStreamSource(
+				MediaVideoTrack^ track, String^ type, String^ id, 
+				uint32 width, uint32 height,
+				PredictionTimestampDelegate^ predictionTimestampDelegate,
+				FpsReportDelegate^ fpsReportDelegate);
 
 			/// <summary>
 			/// Creates an <see cref="IMediaSource"/> for a video track, with a given

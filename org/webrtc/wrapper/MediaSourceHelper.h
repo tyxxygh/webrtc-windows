@@ -70,7 +70,6 @@ namespace Org {
 				std::unique_ptr<SampleData> DequeueFrame();
 				bool HasFrames();
 				void ClearFrames();
-				void ResetFrameRate();
 				void UpdateFrameRate();
 
 			private:

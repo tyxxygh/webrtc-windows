@@ -15,6 +15,8 @@
 #include "webrtc/modules/video_coding/timing.h"
 #include "third_party/winuwp_h264/H264Decoder/H264Decoder.h"
 
+#define MAX_PREDICTION_TIMESTAMP		256
+
 using Microsoft::WRL::ComPtr;
 using Platform::Collections::Vector;
 using Windows::Media::Core::VideoStreamDescriptor;
@@ -126,6 +128,14 @@ namespace Org {
 				else {
 					LONGLONG frameTime = GetNextSampleTimeHns(data->renderTime, _frameType == FrameTypeH264);
 
+					if (data->predictionTimestamp > 0)
+					{
+						// Injects prediction timestamp id so that we can parse it in 
+						// IMFMediaEngine::OnVideoStreamTick() later.
+						data->predictionTimestampId = ++_timestampCounter % MAX_PREDICTION_TIMESTAMP;
+						frameTime = ((frameTime >> 8) << 8) | data->predictionTimestampId;
+					}
+
 					data->sample->SetSampleTime(frameTime);
 
 					// Set the duration property
@@ -146,6 +156,11 @@ namespace Org {
 			bool MediaSourceHelper::HasFrames() {
 				rtc::CritScope lock(&_critSect);
 				return _frames.size() > 0;
+			}
+
+			void MediaSourceHelper::ClearFrames() {
+				rtc::CritScope lock(&_critSect);
+				_frames.clear();
 			}
 
 			// === Private functions below ===

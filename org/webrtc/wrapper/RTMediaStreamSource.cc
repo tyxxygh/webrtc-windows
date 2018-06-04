@@ -109,16 +109,25 @@ namespace Org {
 		namespace Internal {
 
 			RTMediaStreamSource^ RTMediaStreamSource::CreateMediaSource(
-				MediaVideoTrack^ track, VideoFrameType frameType, String^ id) {
+				MediaVideoTrack^ track, VideoFrameType frameType, String^ id,
+				uint32 width, uint32 height,
+				PredictionTimestampDelegate^ predictionTimestampDelegate,
+				FpsReportDelegate^ fpsReportDelegate) {
 
 				auto streamState = ref new RTMediaStreamSource(frameType);
 				streamState->_id = id;
 				streamState->_idUtf8 = rtc::ToUtf8(streamState->_id->Data());
+				streamState->_frameWidth = width;
+				streamState->_frameHeight = height;
 				streamState->_rtcRenderer = std::unique_ptr<RTCRenderer>(
 					new RTCRenderer(streamState));
 				streamState->_videoTrack = track;
 				if (streamState->_videoTrack != nullptr)
 					streamState->_videoTrack->SetRenderer(streamState->_rtcRenderer.get());
+				if (predictionTimestampDelegate)
+					streamState->OnPredictionTimestamp += predictionTimestampDelegate;
+				if (fpsReportDelegate)
+					streamState->FpsReport += fpsReportDelegate;
 				VideoEncodingProperties^ videoProperties;
 				if (frameType == FrameTypeH264) {
 					videoProperties = VideoEncodingProperties::CreateH264();
@@ -233,8 +242,7 @@ namespace Org {
 
 			RTMediaStreamSource::RTMediaStreamSource(VideoFrameType frameType) :
 				_frameSentThisTime(false),
-				_frameBeingQueued(0),
-				_videoSourceStarted(false) {
+				_frameBeingQueued(0) {
 				LOG(LS_INFO) << "RTMediaStreamSource::RTMediaStreamSource";
 
 				// Create the helper with the callback functions.
@@ -378,6 +386,8 @@ namespace Org {
 					spRequest.ReleaseAndGetAddressOf());
 
 				hr = spRequest->SetSample(sampleData->sample.Get());
+				OnPredictionTimestamp(sampleData->predictionTimestampId,
+					sampleData->predictionTimestamp);
 
 				if (_deferral != nullptr) {
 					_deferral->Complete();
@@ -502,6 +512,14 @@ namespace Org {
 				if (_helper == nullptr) {  // May be null while tearing down the MSS
 					return;
 				}
+
+				// Checks for frame filter if we're using.
+				if (_frameWidth != 0 && _frameHeight != 0 && 
+					(frame->width() != _frameWidth || frame->height() != _frameHeight)) {
+					_helper->ClearFrames();
+					return;
+				}
+
 				_helper->QueueFrame(frame);
 
 				// If we have a pending request, reply to it now.
