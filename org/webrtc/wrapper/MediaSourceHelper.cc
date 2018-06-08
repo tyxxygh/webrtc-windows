@@ -15,7 +15,11 @@
 #include "webrtc/modules/video_coding/timing.h"
 #include "third_party/winuwp_h264/H264Decoder/H264Decoder.h"
 
-#define MAX_PREDICTION_TIMESTAMP		256
+#define DISABLE_DROP_FRAMES
+#define ENABLE_SAMPLE_TIME_CALCULATION
+
+#define MAX_PREDICTION_TIMESTAMP			256
+#define MIN_SAMPLE_DURATION					5 * 10000
 
 using Microsoft::WRL::ComPtr;
 using Platform::Collections::Vector;
@@ -37,7 +41,6 @@ namespace Org {
 			bool IsSampleIDR(IMFSample* sample);
 			bool DropFramesToIDR(std::list<webrtc::VideoFrame*>& frames);
 
-
 			SampleData::SampleData()
 				: sizeHasChanged(false)
 				, size({ -1, -1 })
@@ -53,7 +56,7 @@ namespace Org {
 				, _fpsCallback(fpsCallback)
 				, _frameType(frameType)
 				, _isFirstFrame(true)
-				, _futureOffsetMs(45)
+				, _futureOffsetMs(25)
 				, _lastSampleTime(0)
 				, _lastSize({ 0, 0 })
 				, _lastRotation(-1)
@@ -100,6 +103,17 @@ namespace Org {
 						delete frame;
 					}
 				}
+
+#ifdef ENABLE_SAMPLE_TIME_CALCULATION
+				if (_lastSampleTime == 0) {
+					frame->set_ntp_time_ms(_futureOffsetMs);
+				}
+				else {
+					frame->set_ntp_time_ms(rtc::TimeMillis() - _lastSampleTime);
+				}
+
+				_lastSampleTime = rtc::TimeMillis();
+#endif //ENABLE_SAMPLE_TIME_CALCULATION
 			}
 
 			std::unique_ptr<SampleData> MediaSourceHelper::DequeueFrame() {
@@ -122,14 +136,30 @@ namespace Org {
 					_isFirstFrame = false;
 					Org::WebRtc::FirstFrameRenderHelper::FireEvent(
 						rtc::TimeMillis() * rtc::kNumMillisecsPerSec);
+#ifdef ENABLE_SAMPLE_TIME_CALCULATION
+					_frameTimeTotal = data->duration;
+					data->sample->SetSampleTime(_frameTimeTotal);
+#else // ENABLE_SAMPLE_TIME_CALCULATION
 					LONGLONG frameTime = GetNextSampleTimeHns(data->renderTime, _frameType == FrameTypeH264);
 					data->sample->SetSampleTime(frameTime);
+#endif // ENABLE_SAMPLE_TIME_CALCULATION
 				}
 				else {
-					LONGLONG frameTime = GetNextSampleTimeHns(data->renderTime, _frameType == FrameTypeH264);
+#ifdef ENABLE_SAMPLE_TIME_CALCULATION
+					LONGLONG sampleDuration = data->duration / (_frames.size() + 1);
+					if (sampleDuration < MIN_SAMPLE_DURATION) {
+						sampleDuration = MIN_SAMPLE_DURATION;
+					}
 
-					if (data->predictionTimestamp > 0)
-					{
+					//OutputDebugString((L"_frames.size(): " + _frames.size() + "\r\n")->Data());
+					//OutputDebugString((L"sampleDuration: " + (sampleDuration / 10000) + "\r\n")->Data());
+					_frameTimeTotal += sampleDuration;
+					LONGLONG frameTime = _frameTimeTotal;
+#else // ENABLE_SAMPLE_TIME_CALCULATION
+					LONGLONG frameTime = GetNextSampleTimeHns(data->renderTime, _frameType == FrameTypeH264);
+#endif // ENABLE_SAMPLE_TIME_CALCULATION
+
+					if (data->predictionTimestamp > 0) {
 						// Injects prediction timestamp id so that we can parse it in 
 						// IMFMediaEngine::OnVideoStreamTick() later.
 						data->predictionTimestampId = ++_timestampCounter % MAX_PREDICTION_TIMESTAMP;
@@ -140,13 +170,19 @@ namespace Org {
 
 					// Set the duration property
 					if (_frameType == FrameTypeH264) {
+#ifdef ENABLE_SAMPLE_TIME_CALCULATION
+						data->sample->SetSampleDuration(sampleDuration);
+#else // ENABLE_SAMPLE_TIME_CALCULATION
 						data->sample->SetSampleDuration(frameTime - _lastSampleTime);
+#endif // ENABLE_SAMPLE_TIME_CALCULATION
 					}
 					else {
 						LONGLONG duration = (LONGLONG)((1.0 / 30) * 1000 * 1000 * 10);
 						data->sample->SetSampleDuration(duration);
 					}
+#ifndef ENABLE_SAMPLE_TIME_CALCULATION
 					_lastSampleTime = frameTime;
+#endif // #ifdef ENABLE_SAMPLE_TIME_CALCULATION
 				}
 				UpdateFrameRate();
 
@@ -167,14 +203,19 @@ namespace Org {
 
 			std::unique_ptr<SampleData> MediaSourceHelper::DequeueH264Frame() {
 
+#ifndef DISABLE_DROP_FRAMES
 				if (_frames.size() > 15)
 					DropFramesToIDR(_frames);
+#endif // DISABLE_DROP_FRAMES
 
 				std::unique_ptr<webrtc::VideoFrame> frame(_frames.front());
 				_frames.pop_front();
 
 				std::unique_ptr<SampleData> data(new SampleData);
 				data->predictionTimestamp = frame->prediction_timestamp();
+#ifdef ENABLE_SAMPLE_TIME_CALCULATION
+				data->duration = frame->ntp_time_ms() * 10000;
+#endif // ENABLE_SAMPLE_TIME_CALCULATION
 
 				// Get the IMFSample in the frame.
 				{
@@ -364,11 +405,11 @@ namespace Org {
 			void MediaSourceHelper::UpdateFrameRate() {
 				// Do FPS calculation and notification.
 				_frameCounter++;
+
 				// If we have about a second worth of frames
 				int64_t now = rtc::TimeMillis();
 				if ((now - _lastTimeFPSCalculated) > 1000) {
 					_fpsCallback(_frameCounter);
-
 					_frameCounter = 0;
 					_lastTimeFPSCalculated = now;
 				}

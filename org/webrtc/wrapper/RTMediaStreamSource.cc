@@ -30,7 +30,6 @@ using Windows::System::Threading::TimerElapsedHandler;
 using Windows::System::Threading::ThreadPoolTimer;
 
 #define INITIAL_FRAME_RATE			30
-#define INITIAL_SKIPPED_TIME		3000
 
 //namespace Org {
 //	namespace WebRtc {
