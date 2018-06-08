@@ -9,6 +9,7 @@
 #ifndef WEBRTC_BUILD_WINUWP_GYP_API_RTMEDIASTREAMSOURCE_H_
 #define WEBRTC_BUILD_WINUWP_GYP_API_RTMEDIASTREAMSOURCE_H_
 
+#include "Media.h"
 #include "MediaSourceHelper.h"
 #include "webrtc/api/mediastreaminterface.h"
 #include "webrtc/rtc_base/criticalsection.h"
@@ -38,7 +39,10 @@ namespace Org {
 
 			internal:
 				static RTMediaStreamSource^ CreateMediaSource(
-					MediaVideoTrack^ track, VideoFrameType frameType, String^ id);
+					MediaVideoTrack^ track, VideoFrameType frameType, String^ id,
+					uint32 width, uint32 height,
+					PredictionTimestampDelegate^ predictionTimestampDelegate,
+					FpsReportDelegate^ fpsReportDelegate);
 
 				MediaStreamSource^ GetMediaStreamSource();
 
@@ -98,7 +102,11 @@ namespace Org {
 
 				ULONG _frameBeingQueued;
 				ULONGLONG _startTick;
-				bool _videoSourceStarted;
+				int _frameWidth;
+				int _frameHeight;
+
+				event PredictionTimestampDelegate^ OnPredictionTimestamp;
+				event FpsReportDelegate^ FpsReport;
 			};
 		}
 	}

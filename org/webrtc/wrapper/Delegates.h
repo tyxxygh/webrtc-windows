@@ -12,6 +12,11 @@
 
 namespace Org {
 	namespace WebRtc {
+		public value struct VideoFrameMetadata {
+			// Prediction timestamp (for HoloLens only)
+			int64_t predictionTimestamp;
+		};
+
 		/// <summary>
 		/// Generic delegate declaration.
 		/// </summary>
@@ -30,7 +35,20 @@ namespace Org {
 		/// Delegate for receiving video frames from EncodedVideoSource.
 		/// </summary>
 		public delegate void EncodedVideoSourceDelegate(
-			uint32, uint32, const Platform::Array<uint8>^);
+			uint32, uint32,
+			const Platform::Array<uint8>^,
+			Platform::IBox<VideoFrameMetadata>^ = nullptr);
+
+		/// <summary>
+		/// Delegate for receiving the prediction timestamp from video frame.
+		/// </summary>
+		public delegate void PredictionTimestampDelegate(uint8_t, int64_t);
+
+		/// <summary>
+		/// Delegate for getting the render fps of media engine. This helps detect
+		/// when the media engine gets stuck so that we can fix it.
+		/// </summary>
+		public delegate uint32 FpsReportDelegate();
 
 		// ------------------
 		ref class RTCPeerConnectionIceEvent;

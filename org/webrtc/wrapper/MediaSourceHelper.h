@@ -55,6 +55,7 @@ namespace Org {
 				LONGLONG renderTime;
 				LONGLONG predictionTimestamp;
 				uint8_t predictionTimestampId;
+				LONGLONG duration;
 			};
 
 			class MediaSourceHelper {
@@ -70,7 +71,6 @@ namespace Org {
 				std::unique_ptr<SampleData> DequeueFrame();
 				bool HasFrames();
 				void ClearFrames();
-				void ResetFrameRate();
 				void UpdateFrameRate();
 
 			private:
@@ -112,11 +112,7 @@ namespace Org {
 
 				// Prediction timestamp.
 				int _timestampCounter;
-				LONGLONG _lastSampleDuration;
 				LONGLONG _frameTimeTotal;
-				LONGLONG lastTimestampHns_;
-				int64_t _freezeTickTime;
-				bool _isFreezing;
 			};
 		}
 	}
