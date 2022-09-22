@@ -71,6 +71,14 @@ typedef enum nvpipe_error_code {
     NVPIPE_EAGAIN = cuda_ERROR_UNKNOWN+4,
 } nvp_err_t;
 
+#ifndef _WIN32
+    #ifdef __LP64__
+         #define __stdcall
+    #else
+        #define __stdcall __attribute__((__stdcall__))
+    #endif //__LP64__
+#endif//_WIN32
+
 typedef void nvpipe;
 
 typedef nvpipe*(__stdcall *nvpipe_create_encoder)(nvp_codec_t id, uint64_t bitrate, uint64_t frameRate, uint64_t idrPeriod, uint64_t intraRefreshPeriod, bool intraRefreshEnableFlag);
